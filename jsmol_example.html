@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSmol Molecular Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .viewer-section {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        
+        .jsmol-container {
+            flex: 1;
+            min-width: 400px;
+            text-align: center;
+        }
+        
+        #jsmolApplet {
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        
+        .controls {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .control-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .molecule-info {
+            background: #e8f2ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .viewer-section {
+                flex-direction: column;
+            }
+            
+            .jsmol-container {
+                min-width: auto;
+            }
+            
+            #jsmolApplet {
+                width: 100% !important;
+                height: 300px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 JSmol Molecular Viewer</h1>
+        
+        <div class="viewer-section">
+            <div class="jsmol-container">
+                <div id="jsmolApplet" class="loading">Loading JSmol...</div>
+                <div class="molecule-info">
+                    <strong>Current Molecule:</strong> <span id="currentMolecule">Caffeine</span><br>
+                    <strong>Formula:</strong> <span id="moleculeFormula">C₈H₁₀N₄O₂</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <h3>📋 Load Molecules</h3>
+                    <select id="moleculeSelect" onchange="loadSelectedMolecule()">
+                        <option value="caffeine">Caffeine</option>
+                        <option value="aspirin">Aspirin</option>
+                        <option value="water">Water</option>
+                        <option value="methane">Methane</option>
+                        <option value="benzene">Benzene</option>
+                        <option value="ethanol">Ethanol</option>
+                    </select>
+                    <button onclick="loadFromPubChem()">Load from PubChem</button>
+                    <input type="text" id="pubchemInput" placeholder="Enter compound name" style="width: 150px;">
+                </div>
+                
+                <div class="control-group">
+                    <h3>🎨 Display Styles</h3>
+                    <button onclick="setStyle('spacefill')">Space Fill</button>
+                    <button onclick="setStyle('ballstick')">Ball & Stick</button>
+                    <button onclick="setStyle('wireframe')">Wireframe</button>
+                    <button onclick="setStyle('cartoon')">Cartoon</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>🎯 View Controls</h3>
+                    <button onclick="resetView()">Reset View</button>
+                    <button onclick="toggleRotation()">Toggle Rotation</button>
+                    <button onclick="centerMolecule()">Center</button>
+                    <button onclick="fitToScreen()">Fit Screen</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>🌈 Colors</h3>
+                    <button onclick="colorBy('element')">By Element</button>
+                    <button onclick="colorBy('cpk')">CPK Colors</button>
+                    <button onclick="colorBy('amino')">By Amino Acid</button>
+                    <button onclick="setColor('red')">Red</button>
+                    <button onclick="setColor('blue')">Blue</button>
+                    <button onclick="setColor('green')">Green</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>⚙️ Advanced</h3>
+                    <button onclick="showHydrogens()">Show H</button>
+                    <button onclick="hideHydrogens()">Hide H</button>
+                    <button onclick="measureDistance()">Measure</button>
+                    <button onclick="showLabels()">Labels</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JSmol Library with fallback -->
+    <script>
+        // Check if JSmol loads successfully, if not try alternative CDN
+        function loadJSmol() {
+            const script = document.createElement('script');
+            script.src ="<script src="https://chemapps.stolaf.edu/jmol/jsmol/JSmol.min.js"></script> <div id="jsmolApplet" style="width: 100%; height: 400px; border: 1px solid #ccc;"></div> <script> var jsmolApplet; var jsmolInfo = { width: "100%", height: "400", debug: false, color: "white", use: "HTML5", j2sPath: "https://chemapps.stolaf.edu/jmol/jsmol/j2s", serverURL: "https://chemapps.stolaf.edu/jmol/jsmol/php/jsmol.php", script: "load $caffein; spacefill 20%; wireframe 0.15; color cpk;" }; $(document).ready(function() { $("#jsmolApplet").html(Jmol.getAppletHtml("jsmolApplet", jsmolInfo)); jsmolApplet = window["jsmolApplet"]; }); </script>';
+            script.onerror = function() {
+                console.log('Primary CDN failed, trying alternative...');
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = '<script src="https://chemapps.stolaf.edu/jmol/jsmol/JSmol.min.js"></script> <div id="jsmolApplet" style="width: 100%; height: 400px; border: 1px solid #ccc;"></div> <script> var jsmolApplet; var jsmolInfo = { width: "100%", height: "400", debug: false, color: "white", use: "HTML5", j2sPath: "https://chemapps.stolaf.edu/jmol/jsmol/j2s", serverURL: "https://chemapps.stolaf.edu/jmol/jsmol/php/jsmol.php", script: "load $caffein; spacefill 20%; wireframe 0.15; color cpk;" }; $(document).ready(function() { $("#jsmolApplet").html(Jmol.getAppletHtml("jsmolApplet", jsmolInfo)); jsmolApplet = window["jsmolApplet"]; }); </script>';
+                fallbackScript.onerror = function() {
+                    document.getElementById('jsmolApplet').innerHTML = '<p style="color: red;">Error: Could not load JSmol library. Please check your internet connection.</p>';
+                };}
+                fallbackScript.onload = initializeJSmol;
+                document.head.appendChild(fallbackScript);
+            };
+            script.onload = initializeJSmol;
+            document.head.appendChild(script);
+        }
+        
+        // Load JSmol when page loads
+        loadJSmol();
+    </script>
+    
+    <script>
+        // Predefined molecules with their structures
+        const molecules = {
+            caffeine: {
+                name: "Caffeine",
+                formula: "C₈H₁₀N₄O₂",
+                smiles: "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+            },
+            aspirin: {
+                name: "Aspirin", 
+                formula: "C₉H₈O₄",
+                smiles: "CC(=O)OC1=CC=CC=C1C(=O)O"
+            },
+            water: {
+                name: "Water",
+                formula: "H₂O", 
+                smiles: "O"
+            },
+            methane: {
+                name: "Methane",
+                formula: "CH₄",
+                smiles: "C"
+            },
+            benzene: {
+                name: "Benzene",
+                formula: "C₆H₆",
+                smiles: "C1=CC=CC=C1"
+            },
+            ethanol: {
+                name: "Ethanol",
+                formula: "C₂H₆O",
+                smiles: "CCO"
+            }
+        };
+        
+        let jsmolApplet;
+        let isRotating = false;
+        
+        // JSmol Configuration
+        const jsmolInfo = {
+            width: 450,
+            height: 400,
+            debug: false,
+            color: "white",
+            addSelectionOptions: false,
+            use: "HTML5",
+            j2sPath: "https://cdnjs.cloudflare.com/ajax/libs/jsmol/14.32.10/j2s",
+            serverURL: "https://cdnjs.cloudflare.com/ajax/libs/jsmol/14.32.10/php/jsmol.php",
+            script: "set antialiasDisplay; load $caffeine; spacefill 20%; wireframe 0.15; color cpk;",
+            readyFunction: function(applet) {
+                console.log("JSmol is ready!");
+                document.getElementById('jsmolApplet').innerHTML = '';
+            }
+        };
+        
+        // Initialize JSmol - called after library loads
+        function initializeJSmol() {
+            // Wait a bit to ensure Jmol is fully ready
+            setTimeout(function() {
+                if (typeof Jmol !== 'undefined') {
+                    try {
+                        Jmol.setDocument(0);
+                        jsmolApplet = Jmol.getApplet("jsmolApplet", jsmolInfo);
+                        
+                        // Set initial molecule info
+                        updateMoleculeInfo('caffeine');
+                        
+                        console.log('JSmol initialized successfully!');
+                    } catch (error) {
+                        console.error('Error initializing JSmol:', error);
+                        document.getElementById('jsmolApplet').innerHTML = '<p style="color: red;">Error initializing JSmol: ' + error.message + '</p>';
+                    }
+                } else {
+                    console.error('Jmol is still not defined after loading');
+                    document.getElementById('jsmolApplet').innerHTML = '<p style="color: red;">JSmol library failed to load properly.</p>';
+                }
+            }, 1000);
+        }
+        
+        // Load selected molecule from dropdown
+        function loadSelectedMolecule() {
+            if (typeof Jmol === 'undefined' || !jsmolApplet) {
+                alert('JSmol is not ready yet. Please wait a moment and try again.');
+                return;
+            }
+            
+            const select = document.getElementById('moleculeSelect');
+            const moleculeKey = select.value;
+            const molecule = molecules[moleculeKey];
+            
+            if (molecule) {
+                try {
+                    Jmol.script(jsmolApplet, `load ${moleculeKey}; spacefill 20%; wireframe 0.15; color cpk;`);
+                    updateMoleculeInfo(moleculeKey);
+                } catch (error) {
+                    console.error('Error loading molecule:', error);
+                }
+            }
+        }
+        
+        // Update molecule information display
+        function updateMoleculeInfo(moleculeKey) {
+            const molecule = molecules[moleculeKey];
+            if (molecule) {
+                document.getElementById('currentMolecule').textContent = molecule.name;
+                document.getElementById('moleculeFormula').textContent = molecule.formula;
+            }
+        }
+        
+        // Load molecule from PubChem
+        function loadFromPubChem() {
+            if (typeof Jmol === 'undefined' || !jsmolApplet) {
+                alert('JSmol is not ready yet. Please wait a moment and try again.');
+                return;
+            }
+            
+            const input = document.getElementById('pubchemInput').value.trim();
+            if (input) {
+                try {
+                    Jmol.script(jsmolApplet, `load "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${input}/SDF"; spacefill 20%; wireframe 0.15; color cpk;`);
+                    document.getElementById('currentMolecule').textContent = input;
+                    document.getElementById('moleculeFormula').textContent = "Loading...";
+                } catch (error) {
+                    console.error('Error loading from PubChem:', error);
+                    alert('Error loading molecule from PubChem. Please check the compound name.');
+                }
+            }
+        }
+        
+        // Helper function to check if JSmol is ready
+        function checkJSmolReady() {
+            return typeof Jmol !== 'undefined' && jsmolApplet;
+        }
+        
+        // Wrapper function for Jmol.script with error handling
+        function executeJSmolScript(script) {
+            if (!checkJSmolReady()) {
+                alert('JSmol is not ready yet. Please wait a moment and try again.');
+                return;
+            }
+            
+            try {
+                Jmol.script(jsmolApplet, script);
+            } catch (error) {
+                console.error('Error executing JSmol script:', error);
+            }
+        }
+        
+        // Display style functions
+        function setStyle(style) {
+            switch(style) {
+                case 'spacefill':
+                    Jmol.script(jsmolApplet, "spacefill; wireframe off;");
+                    break;
+                case 'ballstick':
+                    Jمل.script(jsmolApplet, "spacefill 20%; wireframe 0.15;");
+                    break;
+                case 'wireframe':
+                    Jmol.script(jsmolApplet, "wireframe only; spacefill off;");
+                    break;
+                case 'cartoon':
+                    Jmol.script(jsmolApplet, "cartoon; spacefill off; wireframe off;");
+                    break;
+            }
+        }
+        
+        // View control functions
+        function resetView() {
+            Jmol.script(jsmolApplet, "reset; zoom 100;");
+        }
+        
+        function toggleRotation() {
+            if (isRotating) {
+                Jmol.script(jsmolApplet, "spin off;");
+                isRotating = false;
+            } else {
+                Jmol.script(jsmolApplet, "spin on;");
+                isRotating = true;
+            }
+        }
+        
+        function centerMolecule() {
+            Jmol.script(jsmolApplet, "center;");
+        }
+        
+        function fitToScreen() {
+            Jmol.script(jsmolApplet, "zoom 0;");
+        }
+        
+        // Color functions
+        function colorBy(scheme) {
+            switch(scheme) {
+                case 'element':
+                    Jmol.script(jsmolApplet, "color atoms cpk;");
+                    break;
+                case 'cpk':
+                    Jmol.script(jsmolApplet, "color cpk;");
+                    break;
+                case 'amino':
+                    Jmol.script(jsmolApplet, "color amino;");
+                    break;
+            }
+        }
+        
+        function setColor(color) {
+            Jmol.script(jsmolApplet, `color ${color};`);
+        }
+        
+        // Advanced functions
+        function showHydrogens() {
+            Jmol.script(jsmolApplet, "select hydrogen; spacefill 10%; wireframe 0.1;");
+        }
+        
+        function hideHydrogens() {
+            Jmol.script(jsmolApplet, "select hydrogen; spacefill off; wireframe off;");
+        }
+        
+        function measureDistance() {
+            Jmol.script(jsmolApplet, "set picking distance;");
+            alert("Click on two atoms to measure distance between them.");
+        }
+        
+        function showLabels() {
+            Jmol.script(jsmolApplet, "label %e;");
+        }
+    </script>
+</body>
+</html>
